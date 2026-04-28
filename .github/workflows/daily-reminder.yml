@@ -1,0 +1,84 @@
+name: 每日学习提醒
+
+on:
+  schedule:
+    - cron: '0 1 * * *'  # 每天北京时间 09:00 (UTC 01:00)
+  workflow_dispatch:      # 允许手动触发
+
+jobs:
+  send-reminder:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # 获取完整 git 历史
+
+      - name: Check progress and send Telegram reminder
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: "8556180511"
+        run: |
+          python3 << 'EOF'
+          import subprocess
+          import urllib.request
+          import json
+          import os
+
+          lessons = [
+            ("01", "slash-commands", "Slash Commands 斜杠命令"),
+            ("02", "memory", "Memory 记忆系统"),
+            ("08", "checkpoints", "Checkpoints 检查点"),
+            ("10", "cli", "CLI 命令行基础"),
+            ("03", "skills", "Skills 技能"),
+            ("06", "hooks", "Hooks 钩子"),
+            ("05", "mcp", "MCP 协议"),
+            ("04", "subagents", "Subagents 子代理"),
+            ("09", "advanced-features", "Advanced Features 高级特性"),
+            ("07", "plugins", "Plugins 插件"),
+          ]
+
+          git_log = subprocess.run(
+            ["git", "log", "--oneline"],
+            capture_output=True, text=True
+          ).stdout.lower()
+
+          completed = []
+          for num, folder, name in lessons:
+            if f"{num}-" in git_log or folder in git_log:
+              completed.append((num, folder, name))
+
+          next_lesson = None
+          for lesson in lessons:
+            if lesson not in completed:
+              next_lesson = lesson
+              break
+
+          if next_lesson is None:
+            message = (
+              "🎉 恭喜你完成了全部 10 课！\n\n"
+              "Claude Code 全部功能你都已经学完了，太棒了！\n"
+              "继续保持，把所学的知识应用到实际项目中吧 💪"
+            )
+          else:
+            num, folder, name = next_lesson
+            message = (
+              f"📚 每日学习提醒\n\n"
+              f"今天的任务：第 {num} 课 - {name}\n"
+              f"当前进度：已完成 {len(completed)} / 共 10 课\n\n"
+              f"坚持每天一课，学习是最好的投资！💡\n\n"
+              f"提示：打开 {num}-{folder}/README.md 开始学习"
+            )
+
+          token = os.environ["TELEGRAM_BOT_TOKEN"]
+          chat_id = os.environ["TELEGRAM_CHAT_ID"]
+          data = json.dumps({"chat_id": chat_id, "text": message}).encode()
+          req = urllib.request.Request(
+            f"https://api.telegram.org/bot{token}/sendMessage",
+            data=data,
+            headers={"Content-Type": "application/json"}
+          )
+          resp = urllib.request.urlopen(req)
+          print(resp.read().decode())
+          print("✅ Telegram 消息发送成功")
+          EOF
