@@ -20,7 +20,6 @@ jobs:
           TELEGRAM_CHAT_ID: "8556180511"
         run: |
           python3 << 'EOF'
-          import subprocess
           import urllib.request
           import json
           import os
@@ -28,24 +27,20 @@ jobs:
           lessons = [
             ("01", "slash-commands", "Slash Commands 斜杠命令"),
             ("02", "memory", "Memory 记忆系统"),
-            ("08", "checkpoints", "Checkpoints 检查点"),
-            ("10", "cli", "CLI 命令行基础"),
             ("03", "skills", "Skills 技能"),
-            ("06", "hooks", "Hooks 钩子"),
-            ("05", "mcp", "MCP 协议"),
             ("04", "subagents", "Subagents 子代理"),
-            ("09", "advanced-features", "Advanced Features 高级特性"),
+            ("05", "mcp", "MCP 协议"),
+            ("06", "hooks", "Hooks 钩子"),
             ("07", "plugins", "Plugins 插件"),
+            ("08", "checkpoints", "Checkpoints 检查点"),
+            ("09", "advanced-features", "Advanced Features 高级特性"),
+            ("10", "cli", "CLI 命令行参考"),
           ]
-
-          git_log = subprocess.run(
-            ["git", "log", "--oneline"],
-            capture_output=True, text=True
-          ).stdout.lower()
 
           completed = []
           for num, folder, name in lessons:
-            if f"{num}-" in git_log or folder in git_log:
+            note_file = f"my-note/{num}-{folder}.md"
+            if os.path.exists(note_file):
               completed.append((num, folder, name))
 
           next_lesson = None
